@@ -49,6 +49,6 @@ getUsagePage (Auth userName password) = runSession defaultConfig $ do
   sendKeys userName userInput
   passInput <- findElem (ByCSS "input[type='password']")
   sendKeys password passInput
-  loginBtn  <- findElem (ByCSS "button[type='button']")
+  loginBtn  <- findElem (ByCSS "button.btn-primary[type='button']")
   click loginBtn
   getSource
