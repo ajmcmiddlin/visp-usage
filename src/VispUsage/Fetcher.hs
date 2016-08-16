@@ -8,6 +8,7 @@ import Prelude hiding (lines, readFile)
 import Data.Text
 import Data.Text.IO
 import Test.WebDriver
+import Test.WebDriver.Commands.Wait
 
 data Auth = Auth Text Text deriving Show
 
@@ -29,26 +30,42 @@ authFile = "/Users/andrew/.visp"
 
 fetchLength :: IO (Either Error Int)
 fetchLength = do
-  page <- fetch
-  case page of
-    Right html -> return . Right $ Data.Text.length html
+  pages <- fetch
+  case pages of
+    Right (html,_) -> return . Right $ Data.Text.length html
     Left err -> return (Left err)
 
 
-fetch :: IO (Either Error Text)
+fetch :: IO (Either Error (Text, Text))
 fetch = do
   mAuth <- mkAuth authFile
   case mAuth of
-    Just auth -> getUsagePage auth >>= return . Right
+    Just auth -> getTwoMonthsUsage auth >>= return . Right
     _         -> return $ Left NoAuth
 
-getUsagePage :: Auth -> IO Text
-getUsagePage (Auth userName password) = runSession defaultConfig $ do
+getTwoMonthsUsage :: Auth -> IO (Text, Text)
+getTwoMonthsUsage auth = runSession defaultConfig $ do
+  login auth
+  month1 <- getSource
+  loadPreviousMonthsUsage
+  month2 <- getSource
+  return (month1, month2)
+
+login :: Auth -> WD ()
+login (Auth userName password) = do
   openPage "https://mybroadbandusage.virginbroadband.com.au/#login"
   userInput <- findElem (ByCSS "input.inputField[type='text']")
   sendKeys userName userInput
   passInput <- findElem (ByCSS "input[type='password']")
   sendKeys password passInput
-  loginBtn  <- findElem (ByCSS "button.btn-primary[type='button']")
+  loginBtn <- findElem (ByCSS "button.btn-primary[type='button']")
   click loginBtn
-  getSource
+  waitUntil 10 $ findElem (ByCSS "h1.myBroadbandHeader")
+  return ()
+
+loadPreviousMonthsUsage :: WD ()
+loadPreviousMonthsUsage = do
+  select <- findElem (ByTag "select")
+  (executeJS (fmap JSArg [select]) "arguments[0].options[1].selected = true") :: WD ()
+  histUsageBtn <- findElem (ByCSS "button.btn-primary[type='button']")
+  click histUsageBtn
