@@ -9,6 +9,7 @@ import Data.Text
 import Data.Text.IO
 import Test.WebDriver
 import Test.WebDriver.Commands.Wait
+import Test.WebDriver.JSON
 
 data Auth = Auth Text Text deriving Show
 
@@ -66,6 +67,6 @@ login (Auth userName password) = do
 loadPreviousMonthsUsage :: WD ()
 loadPreviousMonthsUsage = do
   select <- findElem (ByTag "select")
-  (executeJS (fmap JSArg [select]) "arguments[0].options[1].selected = true") :: WD ()
-  histUsageBtn <- findElem (ByCSS "button.btn-primary[type='button']")
+  noReturn (executeJS (fmap JSArg [select]) "arguments[0].options[1].selected = true")
+  histUsageBtn <- findElem (ByXPath "//button[text()='Get Historical Usage']")
   click histUsageBtn
