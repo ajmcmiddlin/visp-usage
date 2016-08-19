@@ -5,11 +5,15 @@ module VispUsage.Fetcher
   ) where
 
 import Prelude hiding (lines, readFile)
+
+import Control.Concurrent (threadDelay)
+import Control.Monad.IO.Class
 import Data.Text
 import Data.Text.IO
 import Test.WebDriver
 import Test.WebDriver.Commands.Wait
 import Test.WebDriver.JSON
+import Test.WebDriver.Firefox.Profile (loadProfile, prepareProfile)
 
 data Auth = Auth Text Text deriving Show
 
@@ -61,12 +65,24 @@ login (Auth userName password) = do
   sendKeys password passInput
   loginBtn <- findElem (ByCSS "button.btn-primary[type='button']")
   click loginBtn
-  waitUntil 10 $ findElem (ByCSS "h1.myBroadbandHeader")
+  waitUntil 10 $ findUsageBtn
   return ()
 
 loadPreviousMonthsUsage :: WD ()
 loadPreviousMonthsUsage = do
   select <- findElem (ByTag "select")
-  noReturn (executeJS (fmap JSArg [select]) "arguments[0].options[1].selected = true")
-  histUsageBtn <- findElem (ByXPath "//button[text()='Get Historical Usage']")
+  let selectArgs = (fmap JSArg [select])
+
+  noReturn $ executeJS selectArgs "arguments[0].options[1].selected = true"
+  liftIO $ threadDelay (sToMicroS 1)
+  histUsageBtn <- findUsageBtn
   click histUsageBtn
+  liftIO $ threadDelay (sToMicroS 5)
+
+  return ()
+
+findUsageBtn :: WD Element
+findUsageBtn = findElem (ByXPath "//button[text()='Get Historical Usage']")
+
+sToMicroS :: Int -> Int
+sToMicroS  = (* 1000000)
